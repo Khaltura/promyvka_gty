@@ -15,6 +15,31 @@
 </head>
 
 <body>
+    <nav style="background:#1565c0;padding:15px 30px;display:flex;gap:20px;align-items:center;">
+    <a href="{% url 'wash_list' %}" style="color:white;text-decoration:none;font-weight:bold;">
+        Журнал промывок
+    </a>
+
+    <a href="{% url 'balance_list' %}" style="color:white;text-decoration:none;font-weight:bold;">
+        Баланс
+    </a>
+
+    <a href="{% url 'operation_create' %}" style="color:white;text-decoration:none;font-weight:bold;">
+        Добавить операцию
+    </a>
+
+    <div style="margin-left:auto;"></div>
+
+    {% if user.is_authenticated %}
+        <span style="color:white;">
+            {{ user.username }}
+        </span>
+
+        <a href="{% url 'logout' %}" style="color:white;text-decoration:none;font-weight:bold;margin-left:20px;">
+            Выйти
+        </a>
+    {% endif %}
+</nav>
 
 <header class="page-header">
     <div class="header-content">
@@ -97,11 +122,11 @@
                         </td>
 
                         <td>
-                            {{ wash.kts_before|floatformat:2 }}
+                            {{ wash.kts_before|floatformat:0 }}
                         </td>
 
                         <td>
-                            {{ wash.kts_after|floatformat:2 }}
+                            {{ wash.kts_after|floatformat:0 }}
                         </td>
 
                         <td>
@@ -111,7 +136,7 @@
                         <td>
                             {% if wash.cleaning_fluid_amount > 0 %}
                                 <span class="consumption-value">
-                                    {{ wash.cleaning_fluid_amount|floatformat:2 }}
+                                    {{ wash.cleaning_fluid_amount|floatformat:0 }}
                                     л
                                 </span>
                             {% else %}
@@ -132,7 +157,7 @@
                         <td>
                             {% if wash.antifreeze_amount > 0 %}
                                 <span class="consumption-value">
-                                    {{ wash.antifreeze_amount|floatformat:2 }}
+                                    {{ wash.antifreeze_amount|floatformat:0 }}
                                     л
                                 </span>
                             {% else %}

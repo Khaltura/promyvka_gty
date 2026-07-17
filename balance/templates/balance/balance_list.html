@@ -15,6 +15,31 @@
 </head>
 
 <body>
+    <nav style="background:#1565c0;padding:15px 30px;display:flex;gap:20px;align-items:center;">
+    <a href="{% url 'wash_list' %}" style="color:white;text-decoration:none;font-weight:bold;">
+        Журнал промывок
+    </a>
+
+    <a href="{% url 'balance_list' %}" style="color:white;text-decoration:none;font-weight:bold;">
+        Баланс
+    </a>
+
+    <a href="{% url 'operation_create' %}" style="color:white;text-decoration:none;font-weight:bold;">
+        Добавить операцию
+    </a>
+
+    <div style="margin-left:auto;"></div>
+
+    {% if user.is_authenticated %}
+        <span style="color:white;">
+            {{ user.username }}
+        </span>
+
+        <a href="{% url 'logout' %}" style="color:white;text-decoration:none;font-weight:bold;margin-left:20px;">
+            Выйти
+        </a>
+    {% endif %}
+</nav>
 
 <header class="page-header">
     <div class="header-content">
@@ -64,7 +89,7 @@
                 {% endif %}
             "
         >
-            {{ total_balance|floatformat:2 }} л
+            {{ total_balance|floatformat:0 }} л
         </strong>
     </section>
 
@@ -117,7 +142,7 @@
                         <td>
                             {% if row.arrival > 0 %}
                                 <span class="value-positive">
-                                    +{{ row.arrival|floatformat:2 }} л
+                                    +{{ row.arrival|floatformat:0 }} л
                                 </span>
                             {% else %}
                                 0.00 л
@@ -127,7 +152,7 @@
                         <td>
                             {% if row.wash > 0 %}
                                 <span class="value-negative">
-                                    −{{ row.wash|floatformat:2 }} л
+                                    −{{ row.wash|floatformat:0 }} л
                                 </span>
                             {% else %}
                                 0.00 л
@@ -137,7 +162,7 @@
                         <td>
                             {% if row.writeoff > 0 %}
                                 <span class="value-negative">
-                                    −{{ row.writeoff|floatformat:2 }} л
+                                    −{{ row.writeoff|floatformat:0 }} л
                                 </span>
                             {% else %}
                                 0.00 л
@@ -147,7 +172,7 @@
                         <td>
                             {% if row.transfer_in > 0 %}
                                 <span class="value-positive">
-                                    +{{ row.transfer_in|floatformat:2 }} л
+                                    +{{ row.transfer_in|floatformat:0 }} л
                                 </span>
                             {% else %}
                                 0.00 л
@@ -157,7 +182,7 @@
                         <td>
                             {% if row.transfer_out > 0 %}
                                 <span class="value-negative">
-                                    −{{ row.transfer_out|floatformat:2 }} л
+                                    −{{ row.transfer_out|floatformat:0 }} л
                                 </span>
                             {% else %}
                                 0.00 л
@@ -168,13 +193,13 @@
                             {% if row.transfer > 0 %}
 
                                 <span class="status-badge status-positive">
-                                    +{{ row.transfer|floatformat:2 }} л
+                                    +{{ row.transfer|floatformat:0 }} л
                                 </span>
 
                             {% elif row.transfer < 0 %}
 
                                 <span class="status-badge status-negative">
-                                    {{ row.transfer|floatformat:2 }} л
+                                    {{ row.transfer|floatformat:0 }} л
                                 </span>
 
                             {% else %}
@@ -190,13 +215,13 @@
                             {% if row.balance < 0 %}
 
                                 <strong class="balance-value value-negative">
-                                    {{ row.balance|floatformat:2 }} л
+                                    {{ row.balance|floatformat:0 }} л
                                 </strong>
 
                             {% else %}
 
                                 <strong class="balance-value">
-                                    {{ row.balance|floatformat:2 }} л
+                                    {{ row.balance|floatformat:0 }} л
                                 </strong>
 
                             {% endif %}
@@ -234,7 +259,81 @@
         </div>
 
     </section>
+<section class="card" style="margin-top:30px;">
 
+    <div class="card-header">
+        <div>
+            <h2 class="card-title">
+                Общий баланс материалов
+            </h2>
+
+            <p class="card-description">
+                Сводная информация по всем материалам.
+            </p>
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+
+        <table class="data-table">
+
+            <thead>
+                <tr>
+                    <th>Материал</th>
+                    <th>Тип</th>
+                    <th>Количество</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+            {% for material in material_summary %}
+
+                <tr>
+
+                    <td>{{ material.name }}</td>
+
+                    <td>{{ material.type }}</td>
+
+                    <td>
+
+                        {% if material.balance < 0 %}
+
+                            <strong class="value-negative">
+                                {{ material.balance|floatformat:0 }} л
+                            </strong>
+
+                        {% else %}
+
+                            <strong>
+                                {{ material.balance|floatformat:0 }} л
+                            </strong>
+
+                        {% endif %}
+
+                    </td>
+
+                </tr>
+
+            {% empty %}
+
+                <tr>
+                    <td colspan="3">
+                        Пока нет данных
+                    </td>
+                </tr>
+
+            {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</section>
+
+</section>
 </main>
 
 </body>

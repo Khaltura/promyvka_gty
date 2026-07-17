@@ -3,7 +3,12 @@ from decimal import Decimal
 from django.db.models import Sum
 from django.shortcuts import redirect, render
 
-from promyvki.models import CompressorStation, CleaningFluid, Wash
+from promyvki.models import (
+    CompressorStation,
+    CleaningFluid,
+    Antifreeze,
+    Wash,
+)
 
 from .forms import MaterialOperationForm
 from .models import MaterialOperation
@@ -25,18 +30,27 @@ def get_sum(queryset, field_name):
 def balance_list(request):
     """
     Формирует таблицу баланса отдельно для каждой комбинации:
-
     компрессорная станция + промывочная жидкость.
     """
+
     balance_rows = []
 
-    stations = CompressorStation.objects.all().order_by("name")
+    if (
+        request.user.is_authenticated
+        and not request.user.is_superuser
+        and hasattr(request.user, "userprofile")
+    ):
+        stations = CompressorStation.objects.filter(
+            id=request.user.userprofile.station.id
+        )
+    else:
+        stations = CompressorStation.objects.all().order_by("name")
+
     fluids = CleaningFluid.objects.all().order_by("name")
 
     for station in stations:
         for fluid in fluids:
 
-            # Приход жидкости на выбранную КС
             arrival = get_sum(
                 MaterialOperation.objects.filter(
                     operation_type="arrival",
@@ -46,7 +60,6 @@ def balance_list(request):
                 "amount",
             )
 
-            # Списание неиспользованной жидкости
             writeoff = get_sum(
                 MaterialOperation.objects.filter(
                     operation_type="writeoff",
@@ -56,7 +69,6 @@ def balance_list(request):
                 "amount",
             )
 
-            # Расход жидкости непосредственно на промывки
             wash = get_sum(
                 Wash.objects.filter(
                     station=station,
@@ -65,7 +77,6 @@ def balance_list(request):
                 "cleaning_fluid_amount",
             )
 
-            # Передано с текущей КС на другие станции
             transfer_out = get_sum(
                 MaterialOperation.objects.filter(
                     operation_type="transfer",
@@ -75,7 +86,6 @@ def balance_list(request):
                 "amount",
             )
 
-            # Получено текущей КС от других станций
             transfer_in = get_sum(
                 MaterialOperation.objects.filter(
                     operation_type="transfer",
@@ -85,8 +95,6 @@ def balance_list(request):
                 "amount",
             )
 
-            # Положительное значение означает, что КС получила больше,
-            # чем передала. Отрицательное — передала больше, чем получила.
             transfer = transfer_in - transfer_out
 
             current_balance = (
@@ -97,7 +105,6 @@ def balance_list(request):
                 - wash
             )
 
-            # Не показываем строки, по которым вообще не было движения.
             has_operations = any(
                 value != ZERO
                 for value in (
@@ -124,9 +131,60 @@ def balance_list(request):
                     }
                 )
 
-    total_balance = sum(
+        total_balance = sum(
         (row["balance"] for row in balance_rows),
         ZERO,
+    )
+
+        material_summary = []
+
+    # Промывочные жидкости
+    for fluid in fluids:
+
+        balance = ZERO
+
+        for row in balance_rows:
+            if row["fluid"] == fluid:
+                balance += row["balance"]
+
+        if balance != ZERO:
+            material_summary.append(
+                {
+                    "name": fluid.name,
+                    "type": "Промывочная жидкость",
+                    "balance": balance,
+                }
+            )
+
+    # Антифриз
+    antifreezes = Antifreeze.objects.all().order_by("name")
+
+    for antifreeze in antifreezes:
+
+        total = get_sum(
+            Wash.objects.filter(
+                antifreeze=antifreeze,
+            ),
+            "antifreeze_amount",
+        )
+
+        if total != ZERO:
+            material_summary.append(
+                {
+                    "name": antifreeze.name,
+                    "type": "Антифриз",
+                    "balance": total,
+                }
+            )
+
+    return render(
+        request,
+        "balance/balance_list.html",
+        {
+            "balance_rows": balance_rows,
+            "total_balance": total_balance,
+            "material_summary": material_summary,
+        },
     )
 
     return render(
@@ -135,6 +193,8 @@ def balance_list(request):
         {
             "balance_rows": balance_rows,
             "total_balance": total_balance,
+            "fluid_summary": fluid_summary,
+            "antifreeze_summary": antifreeze_summary,
         },
     )
 
@@ -142,18 +202,22 @@ def balance_list(request):
 def operation_create(request):
     """
     Создаёт приход, списание или перераспределение жидкости.
-
-    После успешного сохранения возвращает пользователя
-    на страницу баланса.
     """
+
     if request.method == "POST":
-        form = MaterialOperationForm(request.POST)
+        form = MaterialOperationForm(
+            request.POST,
+            user=request.user,
+        )
 
         if form.is_valid():
             form.save()
             return redirect("balance_list")
+
     else:
-        form = MaterialOperationForm()
+        form = MaterialOperationForm(
+            user=request.user,
+        )
 
     return render(
         request,

@@ -28,8 +28,38 @@ class MaterialOperationForm(forms.ModelForm):
             ),
         }
 
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.user = user
+
+        if (
+            user is not None
+            and user.is_authenticated
+            and not user.is_superuser
+            and hasattr(user, "userprofile")
+        ):
+            station = user.userprofile.station
+
+            self.fields["from_station"].initial = station
+            self.fields["from_station"].disabled = True
+
+            self.fields["to_station"].queryset = (
+                self.fields["to_station"]
+                .queryset
+                .exclude(id=station.id)
+            )
+
     def clean(self):
         cleaned_data = super().clean()
+
+        if (
+            self.user is not None
+            and self.user.is_authenticated
+            and not self.user.is_superuser
+            and hasattr(self.user, "userprofile")
+        ):
+            cleaned_data["from_station"] = self.user.userprofile.station
 
         operation_type = cleaned_data.get("operation_type")
         from_station = cleaned_data.get("from_station")
